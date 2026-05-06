@@ -1,15 +1,31 @@
-# Predicția Top 5 Jucători pe Fiecare Poziție
+# ⚽ Analiza Jucătorilor de Fotbal – Sezon 2025/2026
 
 ## Sursa datelor
-- **Dataset:** All Football Players Stats in Top 5 Leagues 23/24
-- **Link:** https://www.kaggle.com/datasets/orkunaktas/all-football-players-stats-in-top-5-leagues-2324
+- **Dataset:** Football Players Stats 2025-2026
+- **Link:** https://www.kaggle.com/datasets/hubertsidorowicz/football-players-stats-2025-2026
 - **Data descărcării:** 24 martie 2026
 
 ## Obiectivul proiectului
-Scopul acestui proiect este de a analiza statisticile reale ale fotbaliștilor din top 5 campionate ale Europei (sezonul 23/24) pentru a evalua performanța acestora. Obiectivul principal este construirea unui model (sau algoritm) capabil să **identifice și să prezică cei mai buni 5 jucători pentru fiecare poziție** din teren (Atacant, Mijlocaș, Fundaș, Portar). 
+Proiectul analizează statisticile fotbaliștilor din top 5 campionate europene pentru a evalua performanța acestora pe baza datelor reale. Scopul principal este identificarea celor mai buni 5 jucători pentru fiecare poziție (Atacant, Mijlocaș, Fundaș, Portar) folosind algoritmi de machine learning.
 
-Evaluarea se va baza pe metrici de performanță avansate specifice fiecărui rol, cum ar fi: goluri marcate, expected goals (xG), pase decisive (Assists), progresia mingii (PrgC) și minute jucate.
+M-am orientat spre acest subiect pentru că fotbalul modern depinde tot mai mult de date obiective, iar întrebarea dacă un algoritm poate evalua un jucător mai corect decât ochiul uman mi s-a părut interesantă de explorat.
+
+## Ce fel de învățare automată am aplicat?
+Am ales **regresia supervizată** deoarece scopul este să estimez scoruri continue de performanță, nu să clasific jucătorii în categorii fixe. Am antrenat și comparat 10 algoritmi pentru fiecare poziție:
+
+Random Forest, Gradient Boosting, Extra Trees, AdaBoost, Ridge, Lasso, ElasticNet, SVR, KNN și Decision Tree – toți optimizați prin GridSearchCV cu 5-fold cross-validation.
 
 ## Tehnologii utilizate
-- Python 3 (Pandas, Matplotlib, Seaborn pentru curățarea și vizualizarea datelor)
+- Python 3
+- Pandas, NumPy, Matplotlib, Seaborn
+- Scikit-learn
 - Jupyter Notebook
+
+## Structura proiectului
+```
+📁 proiect-fotbal/
+├── 📓 fotbal.ipynb                  # Codul principal
+├── 📄 players_data-2025_2026.csv    # Datele brute
+├── 📄 players-curatat.csv           # Date după curățare
+└── 📖 README.md
+```
