@@ -1,8 +1,5 @@
 # Analiza Performantei Jucatorilor de Fotbal – Sezon 2025/2026
 
-> **Documentatie Proiect – Invatare Automata**  
-> Facultatea de Informatica / Data Science | Anul III, Semestrul II – 2026
-
 ---
 
 ## Cuprins
@@ -254,18 +251,20 @@ Eroarea medie absoluta, mai intuitiva: un MAE de 2.1 inseamna ca modelul gresest
 
 ### 6.2. Rezultatele comparative
 
-| Pozitie | Algoritmul castigator | R² | RMSE | MAE |
-|---------|----------------------|----|------|-----|
-| **Atacanti (FW)** | Random Forest | 0.93 | 2.8 | – |
-| **Mijlocasi (MF)** | Gradient Boosting | 0.91 | 3.1 | – |
-| **Fundasi (DF)** | Extra Trees | 0.92 | 2.6 | – |
-| **Portari (GK)** | Random Forest | 0.89 | 3.4 | – |
+| Pozitie | Algoritmul castigator | R² | RMSE | MAE | CV R² (mean) |
+|---------|----------------------|----|------|-----|--------------|
+| **Atacanti (FW)** | ElasticNet | 0.9963 | 0.0065 | 0.0052 | 0.9913 |
+| **Mijlocasi (MF)** | Ridge Regression | 1.0000 | 0.0000 | 0.0000 | 1.0000 |
+| **Fundasi (DF)** | ElasticNet | 1.0000 | 0.0005 | 0.0004 | 1.0000 |
+| **Portari (GK)** | ElasticNet | 1.0000 | 0.0004 | 0.0003 | 1.0000 |
 
 Cateva observatii din comparatie:
 
-- Modelele liniare (Ridge, Lasso, ElasticNet) au performat surprinzator de bine pentru portari, ceea ce sugereaza ca scorul de performanta pentru aceasta pozitie are o relatie mai liniara cu statisticile individuale.
+- Modelele liniare (Ridge, ElasticNet, Lasso) au dominat la toate cele 4 pozitii, obtinand R² de 1.0000 sau foarte aproape de 1. Explicatia este discutata in sectiunea 7.2.
+- Metodele de ensemble (Random Forest, Gradient Boosting, Extra Trees) au performat solid dar au fost devansate de modelele liniare – ceea ce in mod normal ar fi un semnal de alarma, nu un rezultat pozitiv.
 - AdaBoost a performat constant sub celelalte metode de boosting – probabil din cauza sensibilitatii la outlieri.
-- Decision Tree a overfittat aproape sistematic – diferenta dintre R² pe train si pe test era de 0.10–0.15 fara pruning agresiv.
+- Decision Tree a overfittat aproape sistematic – diferenta dintre R² pe train si pe test era vizibila fara pruning agresiv.
+- KNN a avut cele mai slabe rezultate la toate pozitiile, ceea ce sugereaza ca spatiul caracteristicilor nu are o structura de vecinatate clara.
 
 ![Comparatie R² – toti algoritmii, toate pozitiile](grafic_r2_algoritmi.png)
 
@@ -310,6 +309,10 @@ Topul portarilor a corelat bine cu opinia generala din comunitatea fotbalistica 
 **Contextul echipei lipseste**
 
 Modelul nu "vede" contextul in care evolueaza un jucator. Un mijlocas dintr-o echipa care domina posesia va acumula automat statistici mai mari la pase fata de unul dintr-o echipa care apara mai mult.
+
+**R²=1.0000 – un rezultat care pare prea bun**
+
+La trei din patru pozitii (MF, DF, GK), modelele liniare au obtinut un R² perfect de 1.0000. Aceasta nu este o performanta reala – este o consecinta directa a modului in care a fost construit scorul compozit. Scorul tinta a fost calculat ca o combinatie liniara ponderata a acelorasi statistici care sunt folosite si ca features de intrare in model. Practic, un model liniar poate reconstitui exact formula de calcul a scorului, ceea ce face ca metrica R² sa fie inutila ca indicator de generalizare in acest caz. Pentru o evaluare corecta ar fi necesara o validare externa – de exemplu, compararea topurilor generate cu ratinguri independente (FIFA, WhoScored etc.).
 
 **Scorul compozit ramane subiectiv**
 
@@ -423,5 +426,3 @@ proiect-fotbal/
 | Jupyter Notebook | – | Mediul de dezvoltare si prezentare |
 
 ---
-
-*Proiect realizat in cadrul cursului de Invatare Automata – 2026*
