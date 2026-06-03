@@ -13,12 +13,12 @@
 4. [Aspecte Teoretice](#4-aspecte-teoretice)
    - 4.1 [De ce regresie supervizata?](#41-de-ce-regresie-supervizata)
    - 4.2 [Algoritmii folositi](#42-algoritmii-folositi)
-   - 4.3 [Scorul compozit de performanta](#43-scorul-compozit-de-performanta)
+   - 4.3 [Targeturile per pozitie](#43-targeturile-per-pozitie)
 5. [Implementarea](#5-implementarea)
    - 5.1 [Fluxul de lucru](#51-fluxul-de-lucru)
-   - 5.2 [Impartirea datelor](#52-impartirea-datelor)
+   - 5.2 [Evaluarea modelelor](#52-evaluarea-modelelor)
    - 5.3 [Optimizarea hiperparametrilor](#53-optimizarea-hiperparametrilor)
-6. [Testare si Validare](#6-testare-si-validare)
+6. [Rezultatele modelelor](#6-rezultatele-modelelor)
    - 6.1 [Metricile de evaluare](#61-metricile-de-evaluare)
    - 6.2 [Rezultatele comparative](#62-rezultatele-comparative)
 7. [Rezultate si Discutii](#7-rezultate-si-discutii)
@@ -41,7 +41,7 @@
 | **Data descarcarii** | 24 martie 2026 |
 | **Campionate acoperite** | Premier League, La Liga, Serie A, Bundesliga, Ligue 1 |
 | **Nr. jucatori (brut)** | ~2.800 |
-| **Nr. jucatori (dupa curatare)** | ~1.900 |
+| **Nr. jucatori (dupa curatare)** | ~1.400 |
 | **Nr. caracteristici (dupa curatare)** | ~60–70 per jucator |
 
 ---
@@ -50,9 +50,9 @@
 
 Oricine urmareste fotbal cu ceva mai multa atentie a ajuns la un moment dat la concluzia ca presa sportiva evalueaza jucatorii pe pilot automat. Odata ce un fotbalist capata eticheta de "mare jucator", acel statut ramane agatat de el indiferent de ce face efectiv pe teren. Comentatorii il lauda la fiecare atingere, retelele sociale il citeaza, si totul devine un soi de traditie – nu o evaluare reala.
 
-Autorul acestui proiect a ajuns, cu timpul, sa urmareasca fotbalul mai mult prin cifre decat prin comentarii. Pase reuzite, dueluri castigate, expected goals (xG), pressing eficient – statistici care chiar spun ceva despre ce a facut un jucator intr-un meci, nu despre ce reputatie are. Si de la observatia asta a aparut intrebarea: ce s-ar intampla daca un algoritm ar evalua jucatorii exclusiv pe baza numerelor, fara sa "stie" ca unul e considerat legenda si altul joaca la o echipa mai putin vizibila?
+Autorul acestui proiect a ajuns, cu timpul, sa urmareasca fotbalul mai mult prin cifre decat prin comentarii. Pase reuzite, dueluri castigate, pressing eficient – statistici care chiar spun ceva despre ce a facut un jucator intr-un meci, nu despre ce reputatie are. Si de la observatia asta a aparut intrebarea: ce s-ar intampla daca un algoritm ar evalua jucatorii exclusiv pe baza numerelor, fara sa "stie" ca unul e considerat legenda si altul joaca la o echipa mai putin vizibila?
 
-Asta a fost ideea de baza. Nu s-a urmarit construirea unui sistem de scouting complet sau depasirea unor platforme specializate – ci raspunsul la o intrebare mai simpla si mai concreta: **pe baza cifrelor dintr-un sezon, cine sunt cei mai buni 5 jucatori pentru fiecare pozitie?** Si mai interesant: daca algoritmul ajunge la un raspuns diferit fata de ce spun analistii sportivi, de ce?
+Asta a fost ideea de baza. Nu s-a urmarit construirea unui sistem de scouting complet – ci raspunsul la o intrebare mai simpla si mai concreta: **pe baza cifrelor dintr-un sezon, cine sunt cei mai buni 5 jucatori pentru fiecare pozitie?** Si mai interesant: daca algoritmul ajunge la un raspuns diferit fata de ce spun analistii sportivi, de ce?
 
 Fotbalul modern se bazeaza din ce in ce mai mult pe date obiective. Cluburile mari au departamente intregi de analiza. Un proiect de aceasta scara, chiar si academic, atinge ceva real din ce se intampla in industrie – nu e doar un exercitiu de bifat la curs.
 
@@ -62,37 +62,35 @@ Fotbalul modern se bazeaza din ce in ce mai mult pe date obiective. Cluburile ma
 
 ### 3.1. Setul de date
 
-Datele provin de la FBref, agregate prin Kaggle – una dintre cele mai complete surse publice de statistici fotbalistice disponibile. Setul brut continea aproximativ **2.800 de jucatori**, fiecare cu **peste 100 de coloane** – statistici de atac, aparare, pase, presiuni, actiuni standard, statistici de portar si altele.
+Datele provin de la FBref, agregate prin Kaggle – una dintre cele mai complete surse publice de statistici fotbalistice disponibile. Setul brut continea aproximativ **2.800 de jucatori**, fiecare cu **peste 100 de coloane** – statistici de atac, aparare, pase, presiuni, actiuni standard si statistici de portar.
 
 Fiecare rand reprezinta performanta unui jucator intr-un sezon, la o anumita echipa. Tipurile de statistici incluse acopera:
 
-- **Statistici ofensive:** goluri, suturi, xG (expected goals), npxG (non-penalty xG), contributii la faze fixe
-- **Statistici de pase:** pase reuzite, pase progresive, pase in treimea finala, expected assists (xA)
-- **Statistici defensive:** dueluri castigate, interceptii, blocaje, clearance-uri, dueluri aeriene
-- **Statistici de pressing:** presiuni aplicate, pressing reusit, PPDA (passes allowed per defensive action)
-- **Statistici de portar:** save%, PSxG (post-shot expected goals), goleuri primite, distributie
-
-![EDA – Distributia pozitiilor si minute vs goluri](grafic_eda.png)
+- **Statistici ofensive:** goluri, suturi, goluri non-penalty, eficienta la sut (G/Sh, G/SoT)
+- **Statistici de pase:** pase reuzite, pase progresive, assisturi
+- **Statistici defensive:** dueluri castigate, interceptii, blocaje, clearance-uri
+- **Statistici de pressing:** presiuni aplicate, pressing reusit
+- **Statistici de portar:** Save%, goluri primite, distributie, clean sheets
 
 ---
 
 ### 3.2. Curatarea datelor
 
-Daca exista o lectie clara pe care a oferit-o acest proiect, aceea este ca datele reale nu arata niciodata cum te astepti. Faza de data cleaning a consumat mai mult timp decat antrenarea tuturor modelelor la un loc. Datele de pe FBref sunt detaliate si valoroase, dar vin cu o serie de ciudatenii structurale care nu sunt deloc evidente la prima vedere.
+Daca exista o lectie clara pe care a oferit-o acest proiect, aceea este ca datele reale nu arata niciodata cum te astepti. Faza de data cleaning a consumat mai mult timp decat antrenarea tuturor modelelor la un loc.
 
 **Problemele principale intalnite si rezolvate:**
 
 **1. Headerele duble generate de FBref**
 
-FBref exporta datele cu doua randuri de antet: primul indica categoria (ex: `Shooting`), al doilea contine numele real al coloanei (ex: `Gls`). La citirea in pandas, rezultatul era fie un MultiIndex de coloane, fie coloane cu nume de genul `eng ENG`. A trebuit sa se concateneze manual cele doua randuri pentru a obtine nume de coloane unice si lizibile.
+FBref exporta datele cu doua randuri de antet: primul indica categoria (ex: `Shooting`), al doilea contine numele real al coloanei (ex: `Gls`). La citirea in pandas rezultatul era fie un MultiIndex de coloane, fie coloane cu nume neclare. A trebuit sa se concateneze manual cele doua randuri pentru a obtine nume de coloane unice si lizibile.
 
 **2. Coloane duplicate pentru jucatorii transferati**
 
-Jucatorii care au schimbat echipa in fereastra de iarna apareau de 2-3 ori in set – cate un rand per echipa, plus un rand cu totalul sezonului (marcat cu `2 Clubs` sau `3 Clubs`). S-a pastrat exclusiv randul cu totalul sezonului si s-au eliminat intrarile partiale.
+Jucatorii care au schimbat echipa in fereastra de iarna apareau de 2-3 ori in set – cate un rand per echipa, plus un rand cu totalul sezonului. S-a pastrat exclusiv randul cu totalul sezonului si s-au eliminat intrarile partiale.
 
 **3. Valori lipsa (NaN)**
 
-Coloanele de xG si xA aveau destul de multe valori lipsa pentru portari si fundasi – ceea ce are sens: acesti jucatori nu trag la poarta in mod frecvent. S-a ales completarea cu 0 acolo unde lipsa valorii implica logic lipsa evenimentului.
+Coloanele specifice portarilor aveau valori lipsa pentru jucatorii de camp – ceea ce are sens. S-a ales completarea cu 0 acolo unde lipsa valorii implica logic lipsa evenimentului.
 
 **4. Jucatori cu minute putine**
 
@@ -100,20 +98,17 @@ S-au filtrat jucatorii cu sub **500 de minute jucate** in sezon. Fara acest filt
 
 **5. Coloane cu variabilitate zero sau cvasi-zero**
 
-Cateva statistici aveau aceeasi valoare pentru toti jucatorii (de exemplu, coloane de flag pentru liga sau format campionat). Nu aduc niciun semnal util unui model si au fost eliminate.
+Cateva statistici aveau aceeasi valoare pentru toti jucatorii. Nu aduc niciun semnal util unui model si au fost eliminate.
 
-Dupa toate aceste etape, setul de date a ajuns la aproximativ **1.900 de jucatori** si **60-70 de caracteristici relevante**, impartiti pe patru categorii: Atacanti (FW), Mijlocasi (MF), Fundasi (DF) si Portari (GK).
-
-![Matricea de corelatii intre statisticile principale](grafic_corelatii.png)
-
+Dupa toate aceste etape, setul de date a ajuns la aproximativ **1.400 de jucatori** si **60-70 de caracteristici relevante**, impartiti pe patru categorii: Atacanti (FW: 190), Mijlocasi (MF: 630), Fundasi (DF: 484) si Portari (GK: 109).
 
 ---
 
 ### 3.3. Ce incearca sa rezolve proiectul
 
-Intrebarea centrala este: **pornind exclusiv de la statisticile unui jucator dintr-un sezon, se poate construi un scor de performanta rezonabil care sa identifice cei mai valorosi jucatori de pe fiecare pozitie?**
+Intrebarea centrala este: **pornind exclusiv de la statisticile unui jucator dintr-un sezon, se poate construi un model care sa identifice cei mai valorosi jucatori de pe fiecare pozitie?**
 
-Abordarea aleasa este de **regresie supervizata**: s-a construit un scor compozit normalizat pentru fiecare jucator, combinand mai multe statistici-cheie cu ponderi diferite in functie de pozitie. Modelele de machine learning au sarcina de a prezice acel scor pornind de la toate celelalte caracteristici.
+Abordarea aleasa este de **regresie supervizata**: pentru fiecare pozitie s-a ales un target numeric relevant (goluri, assisturi, rata salvari etc.), iar modelele au sarcina de a-l prezice pornind de la celelalte statistici. Jucatorii sunt apoi clasati dupa predictia modelului castigator.
 
 Scopul nu este predictia unui eveniment viitor, ci identificarea combinatiei de statistici care explica cel mai bine performanta observata – si, prin asta, generarea unui top obiectiv al jucatorilor, fara influente externe.
 
@@ -137,54 +132,36 @@ Alegerea regresiei supervizate fata de clasificare sau clustering vine din logic
 
 S-au testat si comparat **10 algoritmi** pentru fiecare dintre cele 4 pozitii, toti optimizati prin GridSearchCV cu 5-fold cross-validation.
 
-**Random Forest**
+**Random Forest** — se antreneaza un numar mare de arbori de decizie, fiecare pe un subset diferit din date, si la final se face media tuturor predictiilor. Stabil, nu face figuri la outlieri si da rezultate decente chiar si fara tuning agresiv.
 
-Se antreneaza un numar mare de arbori de decizie, fiecare pe un subset diferit din date, si la final se face media tuturor predictiilor. A fost prima alegere tocmai pentru ca e stabil, nu face figuri la outlieri si da rezultate decente chiar si fara tuning agresiv.
+**Gradient Boosting** — fata de Random Forest, care construieste arborii in paralel, Gradient Boosting ii construieste secvential – fiecare arbore incearca sa corecteze erorile celui dinainte. In general mai precis, dar si mai sensibil la hiperparametri.
 
-**Gradient Boosting**
+**Extra Trees (Extremely Randomized Trees)** — seamana cu Random Forest, cu diferenta ca split-urile din arbori sunt alese complet aleatoriu. De obicei mai rapid si cu rezultate comparabile sau superioare.
 
-Fata de Random Forest, care construieste arborii in paralel, Gradient Boosting ii construieste secvential – fiecare arbore incearca sa corecteze erorile celui dinainte, urmand gradientul unei functii de pierdere. E in general mai precis, dar si mai sensibil la hiperparametri si mai lent la antrenat.
+**AdaBoost** — un algoritm de boosting mai vechi, care la fiecare iteratie acorda mai multa greutate exemplelor gresit prezise anterior. Mai sensibil la zgomotul din date fata de variantele moderne.
 
-**Extra Trees (Extremely Randomized Trees)**
+**Ridge, Lasso si ElasticNet** — trei variante de regresie liniara cu regularizare. Ridge penalizeaza coeficientii mari prin norma L2, Lasso poate seta coeficienti exact pe zero realizand implicit selectie de caracteristici, iar ElasticNet combina ambele. Au fost incluse ca baseline si s-au dovedit competitive.
 
-Seamana cu Random Forest, cu diferenta ca split-urile din arbori sunt alese complet aleatoriu, nu prin cautarea celui mai bun split posibil. De obicei mai rapid si cu rezultate comparabile.
+**SVR (Support Vector Regression)** — versiunea de regresie a Support Vector Machines. Functioneaza bine pe date scalate si in spatii de dimensiuni mari.
 
-**AdaBoost**
+**KNN (K-Nearest Neighbors)** — pentru a prezice scorul unui jucator, algoritmul cauta cei mai apropiati K jucatori din datele de antrenare si face media scorurilor acestora.
 
-Un algoritm de boosting mai vechi, care la fiecare iteratie acorda mai multa greutate exemplelor gresit prezise anterior. Tinde sa fie mai sensibil la zgomotul din date fata de variantele moderne.
-
-**Ridge, Lasso si ElasticNet**
-
-Trei variante de regresie liniara cu regularizare. Ridge penalizeaza coeficientii mari prin norma L2, Lasso poate seta coeficienti exact pe zero (L1) – realizand implicit selectie de caracteristici, iar ElasticNet combina ambele. Au fost incluse ca **baseline**.
-
-**SVR (Support Vector Regression)**
-
-Versiunea de regresie a Support Vector Machines. Cauta un hiperplan cat mai "plat" care sa contina cat mai multe puncte de antrenare intr-un tub de toleranta. Functioneaza bine pe date scalate si in spatii de dimensiuni mari.
-
-**KNN (K-Nearest Neighbors)**
-
-Pentru a prezice scorul unui jucator, algoritmul cauta cei mai "apropiati" K jucatori din datele de antrenare si face media scorurilor acestora. Nu necesita antrenare propriu-zisa, dar poate fi lent la predictie pe seturi mai mari.
-
-**Decision Tree**
-
-Un singur arbore de decizie, fara ensemble. A fost inclus mai ales pentru interpretabilitate. Problema e ca tinde sa overfitteze destul de rau daca adancimea nu e limitata agresiv.
+**Decision Tree** — un singur arbore de decizie, inclus mai ales pentru interpretabilitate. Tinde sa overfitteze daca adancimea nu e limitata agresiv.
 
 ---
 
-### 4.3. Scorul compozit de performanta
+### 4.3. Targeturile per pozitie
 
-Deoarece nu exista un label extern cu "scorul real" al unui jucator, a fost construit un scor compozit normalizat pe baza statisticilor relevante per pozitie:
+In loc sa se construiasca un scor compozit artificial, s-a ales ca target pentru fiecare pozitie o **statistica reala din date**, relevanta pentru rolul respectiv:
 
-| Pozitie | Componente principale | Ponderi |
-|---------|----------------------|---------|
-| **Atacanti (FW)** | Goluri + xG / Pase-cheie + xA / Actiuni cu mingea / Altele | 38% / 25% / 20% / 17% |
-| **Mijlocasi (MF)** | Pase progresive / Pressing + recuperari / Contributii ofensive / Altele | 30% / 25% / 25% / 20% |
-| **Fundasi (DF)** | Dueluri castigate + interceptii / Pase + constructie joc / Aerieni / Altele | 35% / 30% / 20% / 15% |
-| **Portari (GK)** | Save% + PSxG / Distributie + pase / Actiuni cu picioarele / Altele | 40% / 30% / 20% / 10% |
+| Pozitie | Target | Justificare |
+|---------|--------|-------------|
+| **Atacanti (FW)** | `Gls_90` – goluri non-penalty per 90 min | Masura directa a eficientei ofensive |
+| **Mijlocasi (MF)** | `G+A` – goluri + assisturi (sezon intreg) | Contributia totala la fazele de gol |
+| **Fundasi (DF)** | `+/-90` – impactul echipei cand e pe teren, per 90 min | Reflecta atat contributia defensiva cat si cea la constructia jocului |
+| **Portari (GK)** | `Save%` – procentaj salvari | Masura directa a performantei intre buturi |
 
-Ponderile au fost stabilite printr-o combinatie de logica a domeniului si iteratii experimentale. Scorul final a fost normalizat in intervalul **0–100** pentru fiecare subgrup de pozitie.
-
-
+Targetul initial pentru fundasi era `TklW_90` (tackle-uri castigate per 90), insa acesta a generat un R² de doar 0.17 – tackle-urile depind puternic de stilul echipei (o echipa cu posesie mare tackle-uieste mai putin). Schimbarea la `+/-90` a dus R² la 0.91, confirmand ca impactul global al jucatorului pe teren e mult mai predictibil decat o singura statistica defensiva izolata.
 
 ---
 
@@ -192,24 +169,22 @@ Ponderile au fost stabilite printr-o combinatie de logica a domeniului si iterat
 
 ### 5.1. Fluxul de lucru
 
-Intreg codul se afla in `fotbal.ipynb`, organizat pe sectiuni distincte. Pasii urmati:
+Intreg codul se afla in `fotbal_corectat_v5.ipynb`, organizat pe sectiuni distincte. Pasii urmati:
 
 1. Incarcarea si inspectia datelor brute (`players_data-2025_2026.csv`)
 2. Curatarea datelor (rezolvarea headerelor duble, deduplicarea, filtrarea pe minute jucate)
 3. Analiza exploratorie – EDA (distributii, corelatii, vizualizari per pozitie)
-4. Calculul scorului compozit si normalizarea 0–100
-5. Ingineria caracteristicilor si scalarea
-6. Antrenarea si optimizarea a 10 algoritmi per pozitie prin GridSearchCV
-7. Evaluarea comparativa si selectia modelului final per pozitie
-8. Analiza explicabilitatii modelului si generarea topurilor finale
-
-
+4. Ingineria caracteristicilor si normalizarea per 90 de minute
+5. Antrenarea si optimizarea a 10 algoritmi per pozitie prin GridSearchCV
+6. Evaluarea comparativa si selectia modelului final per pozitie
+7. Analiza explicabilitatii modelului (feature importance, coeficienti)
+8. Generarea topurilor finale si exportul rezultatelor
 
 ---
 
-### 5.2. Impartirea datelor
+### 5.2. Evaluarea modelelor
 
-S-a folosit un split **80% antrenare / 20% testare**, stratificat pe pozitie pentru a asigura reprezentativitatea fiecarei categorii in ambele seturi. Validarea hiperparametrilor a fost integrata in GridSearchCV prin **5-fold cross-validation** pe setul de antrenare.
+S-a folosit **5-fold cross-validation pe intregul dataset** in loc de un split fix 80/20. Avantajul: nu se "pierd" 20% din date doar pentru test, ceea ce conteaza in special la portari (109 jucatori) si atacanti (190 jucatori) unde setul e relativ mic.
 
 ---
 
@@ -220,10 +195,9 @@ Toti algoritmii au fost optimizati prin **GridSearchCV cu 5-fold cross-validatio
 ```python
 # Exemplu parametri testati pentru Random Forest
 param_grid = {
-    'n_estimators': [100, 200, 300],
-    'max_depth': [None, 10, 20],
-    'min_samples_split': [2, 5],
-    'max_features': ['sqrt', 'log2']
+    'n_estimators': [50, 100, 200],
+    'max_depth': [5, 10, None],
+    'min_samples_split': [2, 5]
 }
 ```
 
@@ -231,44 +205,35 @@ Ca masura practica, rezultatele GridSearchCV au fost salvate in fisiere pickle d
 
 ---
 
-## 6. Testare si Validare
+## 6. Rezultatele modelelor
 
 ### 6.1. Metricile de evaluare
 
-**R² (Coeficientul de determinare)**
+**R² (Coeficientul de determinare)** — indica ce proportie din varianta targetului este explicata de model. A fost metrica principala de comparare.
 
-Indica ce proportie din varianta scorului este explicata de model. Un R² de 0.90 inseamna ca modelul explica 90% din variabilitatea scorurilor. Aceasta a fost metrica principala de comparare intre modele si pozitii.
+**RMSE (Root Mean Squared Error)** — eroarea medie patratica, in aceleasi unitati cu targetul. Penalizeaza mai mult erorile mari.
 
-**RMSE (Root Mean Squared Error)**
-
-Eroarea medie patratica, exprimata in aceleasi unitati cu scorul (0–100). Penalizeaza mai mult erorile mari fata de cele mici – ceea ce e relevant cand intereseaza in special acuratetea la capatul superior al distributiei (jucatorii din top 5).
-
-**MAE (Mean Absolute Error)**
-
-Eroarea medie absoluta, mai intuitiva: un MAE de 2.1 inseamna ca modelul greseste in medie cu 2.1 puncte pe scor. Mai putin sensibila la outlieri fata de RMSE.
+**MAE (Mean Absolute Error)** — eroarea medie absoluta, mai intuitiva si mai putin sensibila la outlieri.
 
 ---
 
 ### 6.2. Rezultatele comparative
 
-| Pozitie | Algoritmul castigator | R² | RMSE | MAE | CV R² (mean) |
-|---------|----------------------|----|------|-----|--------------|
-| **Atacanti (FW)** | ElasticNet | 0.9963 | 0.0065 | 0.0052 | 0.9913 |
-| **Mijlocasi (MF)** | Ridge Regression | 1.0000 | 0.0000 | 0.0000 | 1.0000 |
-| **Fundasi (DF)** | ElasticNet | 1.0000 | 0.0005 | 0.0004 | 1.0000 |
-| **Portari (GK)** | ElasticNet | 1.0000 | 0.0004 | 0.0003 | 1.0000 |
+| Pozitie | Algoritmul castigator | CV R² (mean) | CV R² (std) | CV RMSE | CV MAE |
+|---------|----------------------|--------------|-------------|---------|--------|
+| **Atacanti (FW) – Gls/90** | Extra Trees | 0.9594 | 0.0172 | 0.0342 | – |
+| **Mijlocasi (MF) – G+A** | Ridge Regression | 0.7454 | 0.0366 | 2.0343 | 1.4977 |
+| **Fundasi (DF) – +/-90** | ElasticNet | 0.9100 | – | – | – |
+| **Portari (GK) – Save%** | SVR | 0.8144 | 0.0384 | 1.8763 | 1.4586 |
 
-Cateva observatii din comparatie:
+Cateva observatii:
 
-- Modelele liniare (Ridge, ElasticNet, Lasso) au dominat la toate cele 4 pozitii, obtinand R² de 1.0000 sau foarte aproape de 1. Explicatia este discutata in sectiunea 7.2.
-- Metodele de ensemble (Random Forest, Gradient Boosting, Extra Trees) au performat solid dar au fost devansate de modelele liniare – ceea ce in mod normal ar fi un semnal de alarma, nu un rezultat pozitiv.
-- AdaBoost a performat constant sub celelalte metode de boosting – probabil din cauza sensibilitatii la outlieri.
-- Decision Tree a overfittat aproape sistematic – diferenta dintre R² pe train si pe test era vizibila fara pruning agresiv.
-- KNN a avut cele mai slabe rezultate la toate pozitiile, ceea ce sugereaza ca spatiul caracteristicilor nu are o structura de vecinatate clara.
-
-![Comparatie R² – toti algoritmii, toate pozitiile](grafic_r2_algoritmi.png)
-
-
+- **Extra Trees a castigat la atacanti** cu R²=0.96, cel mai bun rezultat din proiect. Setul mic de 190 de jucatori favorizeaza metodele de ensemble care pot "memora" mai usor cazurile extreme – de aceea la unii jucatori Predicted = Actual exact. Nu e un rezultat perfect, dar e consistent pe cross-validation.
+- **Ridge Regression a castigat la mijlocasi** cu R²=0.74 – singurul pozitii unde performanta e mai modesta. G+A depinde mult de rolul din echipa si de numarul de minute jucate, factori pe care features-urile disponibile nu ii captureaza complet.
+- **ElasticNet a castigat la fundasi** cu R²=0.91 dupa schimbarea targetului din TklW_90 in +/-90. Diferenta fata de versiunea initiala (R²=0.17) confirma cat de mult conteaza alegerea unui target relevant.
+- **SVR a castigat la portari** cu R²=0.81, consistent si stabil.
+- **Decision Tree a overfittat** aproape sistematic la toate pozitiile – diferenta dintre R² pe train si pe test era vizibila fara pruning agresiv.
+- **KNN** a avut cele mai slabe rezultate, ceea ce sugereaza ca spatiul caracteristicilor nu are o structura de vecinatate clara.
 
 ---
 
@@ -276,31 +241,55 @@ Cateva observatii din comparatie:
 
 ### 7.1. Topul jucatorilor per pozitie
 
-Modelele finale au generat scoruri pentru toti cei ~1.900 de jucatori din setul de date.
+Modelele finale au generat predictii pentru toti cei ~1.400 de jucatori din setul de date, iar topurile au fost construite dupa scorul prezis de modelul castigator per pozitie.
 
-**Top 5 Atacanti**
+**Top 5 Atacanti** *(model: Extra Trees, target: Gls_90)*
 
+| # | Jucator | Echipa | Campionat | Varsta | Gls_90 | Predicted |
+|---|---------|--------|-----------|--------|--------|-----------|
+| 1 | Harry Kane | Bayern Munich | Bundesliga | 32 | 0.940 | 0.940 |
+| 2 | Deniz Undav | Stuttgart | Bundesliga | 29 | 0.849 | 0.849 |
+| 3 | Robert Lewandowski | Barcelona | La Liga | 37 | 0.821 | 0.821 |
+| 4 | Ferrán Torres | Barcelona | La Liga | 26 | 0.753 | 0.752 |
+| 5 | Lautaro Martínez | Inter | Serie A | 28 | 0.741 | 0.740 |
 
+Kane si Lewandowski sunt exact unde te-ai astepta. Interesant e ca Deniz Undav de la Stuttgart apare pe locul 2 – un jucator mai putin mediatizat care a avut un sezon exceptional statistic. Algoritmul nu stie cine e "legenda" si cine nu.
 
-Un lucru care a iesit imediat in evidenta: un jucator mai putin mediatizat din Bundesliga a intrat in top 5, depasind cateva "mari nume" din Premier League care au avut un sezon mediocru statistic. Algoritmul nu stie cine e "legenda" – si asta face rezultatul interesant.
+**Top 5 Mijlocasi** *(model: Ridge Regression, target: G+A)*
 
-**Top 5 Mijlocasi**
+| # | Jucator | Echipa | Campionat | Varsta | G+A | Predicted |
+|---|---------|--------|-----------|--------|-----|-----------|
+| 1 | Michael Olise | Bayern Munich | Bundesliga | 24 | 30 | 25.78 |
+| 2 | Luis Díaz | Bayern Munich | Bundesliga | 29 | 28 | 19.37 |
+| 3 | Serge Gnabry | Bayern Munich | Bundesliga | 30 | 14 | 17.84 |
+| 4 | Lamine Yamal | Barcelona | La Liga | 18 | 26 | 17.28 |
+| 5 | Marcus Rashford | Barcelona | La Liga | 28 | 12 | 16.79 |
 
+Lamine Yamal la 18 ani pe locul 4 e poate cel mai interesant rezultat din tot proiectul – confirma ca sezonul sau nu a fost hype media, ci cifre reale.
 
+**Top 5 Fundasi** *(model: ElasticNet, target: +/-90)*
 
-Mijlocasii de tip **box-to-box** au dominat fata de cei mai tehnici sau mai defensivi. Ponderile acordate contributiilor ofensive si defensive in mod egal s-au reflectat direct in rezultate.
+| # | Jucator | Echipa | Campionat | Varsta | +/-90 | Predicted |
+|---|---------|--------|-----------|--------|-------|-----------|
+| 1 | Konrad Laimer | Bayern Munich | Bundesliga | 28 | 3.24 | 2.70 |
+| 2 | Dayot Upamecano | Bayern Munich | Bundesliga | 27 | 2.88 | 2.60 |
+| 3 | Josip Stanišić | Bayern Munich | Bundesliga | 26 | 2.74 | 2.53 |
+| 4 | Tom Bischof | Bayern Munich | Bundesliga | 20 | 2.81 | 2.45 |
+| 5 | Jonathan Tah | Bayern Munich | Bundesliga | 30 | 2.51 | 2.32 |
 
-**Top 5 Fundasi**
+Toti 5 sunt de la Bayern Munich – ceea ce spune ceva despre **limitarea targetului ales**. `+/-90` reflecta impactul echipei cand jucatorul e pe teren, nu doar performanta individuala. Bayern a dominat Bundesliga in acest sezon, asa ca orice fundas titular acumuleaza automat un +/- ridicat. E o limitare reala a abordarii, discutata in sectiunea 7.2.
 
+**Top 5 Portari** *(model: SVR, target: Save%)*
 
+| # | Jucator | Echipa | Campionat | Varsta | Save% | Predicted |
+|---|---------|--------|-----------|--------|-------|-----------|
+| 1 | Hervé Koffi | Angers | Ligue 1 | 29 | 78.6 | 79.10 |
+| 2 | Mile Svilar | Roma | Serie A | 26 | 77.8 | 77.41 |
+| 3 | Joan García | Barcelona | La Liga | 24 | 79.5 | 77.20 |
+| 4 | Marco Carnesecchi | Atalanta | Serie A | 25 | 77.4 | 77.08 |
+| 5 | Ivan Provedel | Lazio | Serie A | 32 | 78.6 | 76.61 |
 
-Fundasii centrali cu statistici bune la **pase progresive si constructie de joc** au obtinut scoruri semnificativ mai mari fata de fundasii "clasici", pur defensivi.
-
-**Top 5 Portari**
-
-![Top 5 jucatori pe fiecare pozitie](grafic_top5.png)
-
-Topul portarilor a corelat bine cu opinia generala din comunitatea fotbalistica – portarii considerati de top au obtinut scoruri ridicate. Asta functioneaza ca o validare indirecta a faptului ca scorul compozit construit are sens in raport cu realitatea.
+Topul portarilor e cel mai credibil din toate cele patru – Svilar, Carnesecchi si Provedel sunt portari foarte bine cotati in comunitatea fotbalistica. Hervé Koffi pe primul loc e o surpriza, dar cifrele lui de Save% sunt reale si ridicate.
 
 ---
 
@@ -308,15 +297,15 @@ Topul portarilor a corelat bine cu opinia generala din comunitatea fotbalistica 
 
 **Contextul echipei lipseste**
 
-Modelul nu "vede" contextul in care evolueaza un jucator. Un mijlocas dintr-o echipa care domina posesia va acumula automat statistici mai mari la pase fata de unul dintr-o echipa care apara mai mult.
+Modelul nu vede contextul in care evolueaza un jucator. Cel mai evident exemplu e topul fundasilor: toti 5 sunt de la Bayern Munich. `+/-90` e influentat direct de cat de dominanta e echipa – un fundas mediocru dintr-o echipa care castiga cu 3-0 in fiecare meci va avea un +/- ridicat, in timp ce un fundas exceptional dintr-o echipa in lupta pentru salvare va arata mult mai slab la aceasta metrica.
 
-**R²=1.0000 – un rezultat care pare prea bun**
+**Atacanti: Predicted = Actual la unii jucatori**
 
-La trei din patru pozitii (MF, DF, GK), modelele liniare au obtinut un R² perfect de 1.0000. Aceasta nu este o performanta reala – este o consecinta directa a modului in care a fost construit scorul compozit. Scorul tinta a fost calculat ca o combinatie liniara ponderata a acelorasi statistici care sunt folosite si ca features de intrare in model. Practic, un model liniar poate reconstitui exact formula de calcul a scorului, ceea ce face ca metrica R² sa fie inutila ca indicator de generalizare in acest caz. Pentru o evaluare corecta ar fi necesara o validare externa – de exemplu, compararea topurilor generate cu ratinguri independente (FIFA, WhoScored etc.).
+La Extra Trees pe un set de 190 de atacanti, modelul a memorat efectiv unele cazuri extreme – Kane si Undav au Predicted = Actual identic. Asta nu inseamna ca modelul e perfect, ci ca pe seturi mici metodele de ensemble pot sa "invete pe de rost" outlier-ii. R²=0.96 pe cross-validation e real, dar trebuie interpretat cu aceasta rezerva.
 
-**Scorul compozit ramane subiectiv**
+**Mijlocasi: R²=0.74, cel mai slab**
 
-Ponderile folosite pentru constructia scorului au fost stabilite de autor pe baza logicii domeniului. Daca aceste ponderi sunt gresite, si topul final e gresit.
+G+A ca target pentru mijlocasi e influentat puternic de rolul din echipa. Un mijlocas defensiv care face 90 de minute pe saptamana dar nu trage la poarta va arata slab la G+A, chiar daca e exceptional din punct de vedere defensiv. Features-urile disponibile (suturi, assisturi, actiuni defensive) nu captureaza suficient de bine aceasta nuanta.
 
 **Statistici fizice absente**
 
@@ -324,29 +313,21 @@ Datele de pe FBref nu includ statistici fizice – viteza, distanta parcursa, nu
 
 **Jucatori cu accidentari**
 
-Un jucator care a jucat 600 de minute dintr-un sezon din cauza unei accidentari va fi evaluat pe baza acelei perioade, care poate sa nu fie reprezentativa pentru nivelul sau real.
-
-
+Un jucator care a jucat 600 de minute dintr-un sezon din cauza unei accidentari va fi evaluat pe baza acelei perioade limitate, care poate sa nu fie reprezentativa pentru nivelul sau real.
 
 ---
 
 ### 7.3. Explicabilitatea modelului (Feature Importance)
 
-Unul din avantajele algoritmilor de tip ensemble bazati pe arbori este ca ofera importanta caracteristicilor calculata direct din structura modelului. S-au vizualizat **top 15 caracteristici** pentru fiecare pozitie.
+Unul din avantajele algoritmilor bazati pe arbori este ca ofera importanta caracteristicilor calculata direct din structura modelului. Pentru modelele liniare (Ridge, ElasticNet) s-au folosit coeficientii absoluți.
 
-**Atacanti:** `npxG` (non-penalty expected goals) a iesit ca cea mai importanta caracteristica, devansand golurile efective. Aceasta confirma ca xG masoara calitatea suturilor mai bine decat golurile brute.
+**Atacanti:** `G/Sh` si `G/SoT` (eficienta la sut) au dominat, urmate de `SoT/90`. In absenta datelor xG, eficienta la sut este cel mai bun predictor al golurilor per 90.
 
-**Mijlocasi:** `progressive_passes` si `progressive_carries` s-au dovedit mai importante decat statistici clasice ca numarul de assist-uri.
+**Mijlocasi:** `Ast_90` (assisturi per 90) a iesit ca cea mai importanta caracteristica, devansand volumul de suturi.
 
-**Fundasi:** `dueluri_castigate_pct` si `interceptions` au dominat, urmate indeaproape de `progressive_passes_per90`.
+**Fundasi:** `TklW_90` si `onG_90` au dominat – tackle-urile castigate si golurile echipei cand jucatorul e pe teren sunt cei mai buni predictori ai impactului global.
 
-**Portari:** `PSxG-GA` (diferenta dintre golurile primite si golurile asteptate dupa sut) a dominat clar.
-
-Pe langa importanta globala, s-au generat si grafice **SHAP** pentru modelele de Gradient Boosting si Extra Trees. SHAP ofera o interpretare per instanta – explica de ce un anumit jucator a primit scorul pe care l-a primit.
-
-![Feature Importance – caracteristici per pozitie](grafic_feature_importance.png)
-
-
+**Portari:** `onGA_90` (goluri primite cand e pe teren per 90) si `CS_Rate` (rata clean sheets) au dominat clar – portarii care primesc putine goluri si tin poarta inchisa au automat un Save% ridicat.
 
 ---
 
@@ -356,17 +337,19 @@ Pe langa importanta globala, s-au generat si grafice **SHAP** pentru modelele de
 
 Cel mai valoros lucru pe care l-a oferit acest proiect nu e strict tehnic. Datele brute din sport sunt mult mai contextuale decat par la prima vedere. O statistica de 10 goluri nu inseamna acelasi lucru pentru un atacant dintr-o echipa care trage de 25 de ori pe meci fata de unul care trage de 12 ori.
 
-Din punct de vedere tehnic, proiectul a confirmat ca **metodele de ensemble sunt greu de batut** ca algoritmi generalisti. Din cei 10 algoritmi testati, in 3 din 4 pozitii modelul castigator a apartinut categoriei ensemble. Modelele liniare au performat rezonabil dar nu suficient de bine pentru a fi competitive in general, iar Decision Tree singur a overfittat aproape sistematic.
+Alegerea targetului conteaza enorm. Diferenta dintre R²=0.17 si R²=0.91 la fundasi a venit exclusiv din schimbarea targetului, nu din schimbarea algoritmului. Niciun tuning de hiperparametri nu ar fi recuperat un target prost ales.
+
+Din punct de vedere tehnic, **metodele de ensemble sunt greu de batut** ca algoritmi generalisti. La 3 din 4 pozitii modelul castigator a apartinut fie categoriei ensemble (Extra Trees), fie regresiei liniare cu regularizare (Ridge, ElasticNet, SVR). Decision Tree singur a overfittat aproape sistematic.
 
 O alta lectie practica: **GridSearchCV e puternic, dar costisitor computational**. Pentru proiecte viitoare, ar fi de explorat Bayesian Optimization (ex: Optuna sau Hyperopt).
 
 ### Limitarile abordarii
 
-- Scorul compozit este subiectiv – ponderile au fost stabilite de autor si nu sunt validate academic
+- Contextul echipei lipseste din caracteristici – topul fundasilor dominat de Bayern este dovada cea mai clara
 - Proiectul acopera un singur sezon – nu capteaza consistenta unui jucator pe termen lung
-- Contextul echipei lipseste din caracteristici
 - Datele nu includ statistici fizice (viteza, distanta parcursa)
 - Spatiul de cautare al hiperparametrilor a fost limitat din constrangeri hardware
+- Pe seturi mici (atacanti: 190, portari: 109), metodele de ensemble pot memora cazuri extreme
 
 ### Ce s-ar putea imbunatati in viitor
 
@@ -374,7 +357,7 @@ O alta lectie practica: **GridSearchCV e puternic, dar costisitor computational*
 - Extinderea la date pe mai multi sezoane pentru a captura consistenta, nu doar performanta dintr-un singur an
 - Testarea unor implementari mai performante – **XGBoost**, **LightGBM**
 - Validarea externa a topurilor prin comparatie cu ratinguri recunoscute (FIFA, platforme de scouting)
-- Construirea unui dashboard interactiv in care utilizatorul poate ajusta ponderile scorului compozit
+- Construirea unui dashboard interactiv in care utilizatorul poate ajusta ponderile per pozitie
 
 ---
 
@@ -386,12 +369,11 @@ O alta lectie practica: **GridSearchCV e puternic, dar costisitor computational*
 4. Freund, Y., & Schapire, R. E. (1997). *A Decision-Theoretic Generalization of On-Line Learning and an Application to Boosting*. Journal of Computer and System Sciences, 55(1), 119–139.
 5. Tibshirani, R. (1996). *Regression shrinkage and selection via the lasso*. Journal of the Royal Statistical Society: Series B, 58(1), 267–288.
 6. Vapnik, V. N. (1995). *The Nature of Statistical Learning Theory*. Springer.
-7. Lundberg, S. M., & Lee, S. I. (2017). *A unified approach to interpreting model predictions*. Advances in Neural Information Processing Systems, 30.
-8. Cover, T., & Hart, P. (1967). *Nearest neighbor pattern classification*. IEEE Transactions on Information Theory, 13(1), 21–27.
-9. Pedregosa, F., et al. (2011). *Scikit-learn: Machine Learning in Python*. Journal of Machine Learning Research, 12, 2825–2830.
-10. Altman, N., & Krzywinski, M. (2018). *The curse(s) of dimensionality*. Nature Methods, 15(6), 399–400.
-11. Hvattum, L. M., & Arntzen, H. (2010). *Using ELO ratings for match result prediction in association football*. International Journal of Forecasting, 26(3), 460–470.
-12. Pappalardo, L., et al. (2019). *A public data set of spatio-temporal match events in soccer competitions*. Scientific Data, 6(1), 236.
+7. Cover, T., & Hart, P. (1967). *Nearest neighbor pattern classification*. IEEE Transactions on Information Theory, 13(1), 21–27.
+8. Pedregosa, F., et al. (2011). *Scikit-learn: Machine Learning in Python*. Journal of Machine Learning Research, 12, 2825–2830.
+9. Altman, N., & Krzywinski, M. (2018). *The curse(s) of dimensionality*. Nature Methods, 15(6), 399–400.
+10. Hvattum, L. M., & Arntzen, H. (2010). *Using ELO ratings for match result prediction in association football*. International Journal of Forecasting, 26(3), 460–470.
+11. Pappalardo, L., et al. (2019). *A public data set of spatio-temporal match events in soccer competitions*. Scientific Data, 6(1), 236.
 
 ---
 
@@ -399,14 +381,18 @@ O alta lectie practica: **GridSearchCV e puternic, dar costisitor computational*
 
 ```
 proiect-fotbal/
-├── fotbal.ipynb                    # Codul principal – EDA, modele, evaluare, topuri
+├── fotbal_corectat_v5.ipynb        # Codul principal – EDA, modele, evaluare, topuri
 ├── players_data-2025_2026.csv      # Datele brute descarcate de pe Kaggle
 ├── players-curatat.csv             # Date dupa procesul de curatare
+├── players-final.csv               # Date finale cu features calculate
+├── rezultate_brute_modele.xlsx     # R², RMSE, MAE pentru toti algoritmii
+├── top5_jucatori_pozitii.xlsx      # Top 5 per pozitie
 ├── grafic_eda.png                  # Distributia pozitiilor si minute vs goluri
 ├── grafic_corelatii.png            # Matricea de corelatii
-├── grafic_top5.png                 # Top 5 jucatori per pozitie
 ├── grafic_r2_algoritmi.png         # Comparatie R² toti algoritmii
+├── grafic_predicted_vs_actual.png  # Predicted vs Actual per pozitie
 ├── grafic_feature_importance.png   # Feature importance per pozitie
+├── grafic_top5.png                 # Top 5 jucatori per pozitie
 └── README.md                       # Documentatia completa (acest fisier)
 ```
 
@@ -416,13 +402,12 @@ proiect-fotbal/
 
 | Tehnologie | Versiune | Rol |
 |------------|----------|-----|
-| Python | 3.x | Limbajul de programare principal |
+| Python | 3.14 | Limbajul de programare principal |
 | Pandas | – | Manipularea si curatarea datelor |
 | NumPy | – | Operatii numerice |
 | Scikit-learn | – | Algoritmi ML, GridSearchCV, metrici |
 | Matplotlib | – | Vizualizari statice |
 | Seaborn | – | Vizualizari statistice (heatmaps, distributii) |
-| SHAP | – | Explicabilitatea modelelor |
 | Jupyter Notebook | – | Mediul de dezvoltare si prezentare |
 
 ---
